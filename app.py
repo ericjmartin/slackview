@@ -168,10 +168,23 @@ socketClient = SocketModeClient(
 )
 webClient = WebClient(token=config['slack_bot_token'])
 
-def channel_list():
+
+def channel_list(channels=None, cursor=''):
+    '''
+     Modified for multi-page processing and filtering based on channel membership
+     '''
     try:
-        result = webClient.conversations_list()
-        return result['channels']
+        if channels == None: channels = []
+        result = webClient.conversations_list(exclude_archived=True,cursor=cursor, limit=50)
+        for ch in result['channels']:
+            if ch['is_member']:
+                channels.append(ch)
+        
+        cursor = result['response_metadata']['next_cursor']
+        if cursor != '':
+            channel_list(channels=channels,cursor=cursor)
+
+        return channels
     except SlackApiError as e:
         logger.error("Error fetching channels: {}".format(e))
         return
@@ -187,8 +200,8 @@ def get_channel_by_id(slackChannelId):
 
 def get_channel_by_name(slackChannelName):
     try:
-        result = webClient.conversations_list()
-        for channel in result['channels']:
+        channels = channel_list()
+        for channel in channels:
             if channel['name'] == slackChannelName:
                 return channel
     except SlackApiError as e:
@@ -409,7 +422,8 @@ def watch(channel_name):
     channel = get_channel_by_name(channel_name)
     try:
         channel_history = get_channel_history(channel['id'],config['history_limit'])
-    except Exception:
+    except Exception as e:
+        print(e)
         return redirect('/', 307)
     return render_template('slackview.html',
                            web_address=config['web_address'],
