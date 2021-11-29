@@ -2,5 +2,4 @@ __pycache__
 .users-cache.tmp.json
 .emoji-cache.tmp.json
 .channel-cache.tmp.json
-config.yml
 slackview.log

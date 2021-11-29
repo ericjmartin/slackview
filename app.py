@@ -371,7 +371,7 @@ def render_bot_message(message):
 
 def process(client: SocketModeClient, req: SocketModeRequest):
     if req.type == 'events_api':
-        logger.debug("Event detected: %s" % req.payload["event"])
+        logger.info("Event detected: %s" % req.payload["event"])
         # Acknowledge the request anyway
         response = SocketModeResponse(envelope_id=req.envelope_id)
         socketClient.send_socket_mode_response(response)
@@ -389,6 +389,8 @@ def process(client: SocketModeClient, req: SocketModeRequest):
              payload = render_bot_message(req.payload['event'])
              room_name = get_channel_by_id(req.payload['event'].get('channel'))
              socketio.emit('newmessage', {'text': payload}, namespace='/watch', room=room_name['name'])
+    else: 
+        logger.info('Something else')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -398,8 +400,11 @@ socketio = SocketIO(app, async_mode='gevent', logger=True, engineio_logger=True,
 thread = None
 
 def watch_slack():
+    print('thread started')
     socketClient.socket_mode_request_listeners.append(process)
+    print('thread connected')
     socketClient.connect()
+    print('thread waiting')
     Event().wait()
 
 @app.route('/')
@@ -419,6 +424,9 @@ def index():
 def watch(channel_name):
     global channel
     global channel_history
+    global thread
+    if thread is None:
+        print("NOOOO")
     channel = get_channel_by_name(channel_name)
     try:
         channel_history = get_channel_history(channel['id'],config['history_limit'])
